@@ -1,8 +1,8 @@
 import axios from "axios";
 
 
-export const baseUrl = "https://apisupermenu.mmm2007.net"; // เปลี่ยนเป็น URL ของเซิร์ฟเวอร์จริง
-// export const baseUrl = "http://localhost:5127"; // เปลี่ยนเป็น URL ของเซิร์ฟเวอร์จริง
+// export const baseUrl = "https://apisupermenu.mmm2007.net"; // เปลี่ยนเป็น URL ของเซิร์ฟเวอร์จริง
+export const baseUrl = "http://localhost:5127"; // เปลี่ยนเป็น URL ของเซิร์ฟเวอร์จริง
 
 const api = axios.create({
     baseURL: `${baseUrl}/api`,
@@ -12,15 +12,29 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
     const domain = localStorage.getItem("adminBrandDomain");
     if (domain) {
-        config.headers["X-Brand-Id"] = domain;  
+        config.headers["X-Brand-Id"] = domain;
     }
     const token = localStorage.getItem("accessToken");
-   
+
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // ล้างของเล่นที่หมดอายุ
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("adminBrandDomain");
+
+            // เด้งออกแบบไม่ต้องมีพิธีรีตอง
+            window.location.href = "/";
+        }
+        return Promise.reject(error);
+    }
+);
 
 /* ---------- USER ---------- */
 export const getMenu = async () => {
@@ -80,12 +94,14 @@ export const updateBrand = async (brandId, formData) => {
     return res.data;
 };
 
-export const updateMenuLink = async (menuId, categoryId) => {
+export const updateMenuLink = async (menuId, categoryId, externalUrl) => {
     await api.post("/admin/menu/update-link", {
         menuId,
         categoryId,
+        externalUrl,
     });
 };
+
 
 /* ---------- USER ---------- */
 export const getUsers = async () => {

@@ -12,10 +12,10 @@ export default function MenuPosterPage({ menus, loading }) {
     );
   }
 
-    if (menus.length === 0) {
+  if (menus.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-4">
-        <span className=""><Info/></span>
+        <span className=""><Info /></span>
         <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-stone-400">Menu not available</p>
       </div>
     );
@@ -27,7 +27,7 @@ export default function MenuPosterPage({ menus, loading }) {
     const element = document.getElementById(`preview-menu-${categoryId}`);
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "start" });
-      
+
       // Flash effect ให้รู้ว่าวาร์ปมาตัวไหน
       element.classList.add("brightness-125", "transition-all", "duration-500");
       setTimeout(() => element.classList.remove("brightness-125"), 1000);
@@ -41,7 +41,13 @@ export default function MenuPosterPage({ menus, loading }) {
           key={menu.id}
           id={`preview-menu-${menu.id}`}
           className="w-full relative group overflow-hidden"
-          onClick={() => handleScrollTo(menu.category)}
+          onClick={() => {
+            if (menu.externalUrl) {
+              window.open(menu.externalUrl, "_blank", "noopener,noreferrer");
+            } else {
+              handleScrollTo(menu.category);
+            }
+          }}
         >
           <img
             src={`${baseUrl}${menu.imageUrl}`}
@@ -50,7 +56,7 @@ export default function MenuPosterPage({ menus, loading }) {
             loading="lazy"
           />
           {/* แสดง Icon ลิงก์เล็กๆ ในหน้า User ให้รู้ว่ากดได้ */}
-         
+
         </div>
       ))}
     </div>

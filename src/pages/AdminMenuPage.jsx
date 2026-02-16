@@ -3,7 +3,7 @@ import { createBrand, uploadMenuImage, updateMenuSort, updateMenuLink, updateBra
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { Upload, PlusCircle, LayoutGrid, Save, X, Globe, Store, ImagePlus } from "lucide-react";
-import SortableMenuItem from "../components/SortableMenuItem";
+import SortableMenuItem from "../Components/SortableMenuItem";
 
 export default function AdminMenuPage({ menus, setMenus, brands, setBrands, currentDomain, setCurrentDomain, onReload }) {
     const [isCreating, setIsCreating] = useState(false);
@@ -71,9 +71,24 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
         await updateMenuSort(newList.map((m, i) => ({ id: m.id, sortOrder: i + 1 })));
     };
 
-    const handleUpdateCategory = async (id, categoryId) => {
-        setMenus(prev => prev.map(m => m.id === id ? { ...m, category: categoryId } : m));
-        await updateMenuLink(id, categoryId);
+    const handleUpdateCategory = async (menuId, categoryId, externalUrl ) => {
+        setMenus(prev =>
+            prev.map(m =>
+                m.id === menuId
+                    ? {
+                        ...m,
+                        category: categoryId ?? null,
+                        externalUrl: externalUrl ?? null
+                    }
+                    : m
+            )
+        );
+
+        await updateMenuLink(
+            menuId,
+            categoryId,
+            externalUrl
+        );
     };
     useEffect(() => {
         const open = () => setIsCreating(true);
@@ -281,6 +296,13 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
                         onChange={async (e) => {
                             const files = Array.from(e.target.files);
 
+                            // จำกัดไม่เกิน 5 ไฟล์
+                            if (files.length > 5) {
+                                alert("อัปโหลดได้ไม่เกิน 5 ไฟล์ต่อครั้ง");
+                                e.target.value = null;
+                                return;
+                            }
+
                             // กันไฟล์ไม่ใช่รูป
                             const invalid = files.filter(f => !f.type.startsWith("image/"));
                             if (invalid.length) {
@@ -301,6 +323,7 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
                             }
                         }}
                     />
+
 
 
                 </label>
