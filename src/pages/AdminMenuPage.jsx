@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createBrand, uploadMenuImage, updateMenuSort, updateMenuLink, updateBrand, baseUrl } from "../api/api";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { Upload, PlusCircle, LayoutGrid, Save, X, Globe, Store, ImagePlus } from "lucide-react";
 import SortableMenuItem from "../Components/SortableMenuItem";
 
-export default function AdminMenuPage({ menus, setMenus, brands, setBrands, currentDomain, setCurrentDomain, onReload }) {
+export default function AdminMenuPage({ menus, setMenus, brands, setBrands, currentDomain, setCurrentDomain, onReload, pageId, pages }) {
     const [isCreating, setIsCreating] = useState(false);
     const [newBrand, setNewBrand] = useState({ name: "", domain: "", logo: null });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,44 +52,42 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
         }
     };
 
-
-    const closeModal = () => {
+    const closeModal = useCallback(() => {
         setIsCreating(false);
         setEditingBrand(null);
         setNewBrand({ name: "", domain: "", logo: null });
         setLogoPreview(null);
-    };
+    }, []);
 
 
-    const handleDragEnd = async ({ active, over }) => {
+    const handleDragEnd = useCallback(async ({ active, over }) => {
         if (!over || active.id === over.id) return;
+
         const oldIndex = menus.findIndex(m => m.id === active.id);
         const newIndex = menus.findIndex(m => m.id === over.id);
         const newList = arrayMove(menus, oldIndex, newIndex);
 
         setMenus(newList);
         await updateMenuSort(newList.map((m, i) => ({ id: m.id, sortOrder: i + 1 })));
-    };
+    }, [menus, setMenus]); // ใส่ dependency ให้ถูกต้อง
 
-    const handleUpdateCategory = async (menuId, categoryId, externalUrl ) => {
+    const handleUpdateCategory = useCallback(async (menuId, categoryId, externalUrl, internalUrl) => {
         setMenus(prev =>
             prev.map(m =>
                 m.id === menuId
                     ? {
                         ...m,
                         category: categoryId ?? null,
-                        externalUrl: externalUrl ?? null
+                        externalUrl: externalUrl ?? null,
+                        internalUrl: internalUrl ?? null
                     }
                     : m
             )
         );
 
-        await updateMenuLink(
-            menuId,
-            categoryId,
-            externalUrl
-        );
-    };
+        await updateMenuLink(menuId, categoryId, externalUrl, internalUrl);
+    }, [setMenus]);
+
     useEffect(() => {
         const open = () => setIsCreating(true);
         document.addEventListener("open-create-brand", open);
@@ -162,9 +160,11 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
                                 {menus.map((menu, index) => (
                                     <SortableMenuItem
                                         key={menu.id}
+                                        pageId={pageId}
                                         menu={menu}
+                                        menus={menus}
                                         index={index}
-                                        pages={menus}
+                                        pages={pages}
                                         onReload={onReload}
                                         onUpdateCategory={handleUpdateCategory}
                                     />
@@ -313,7 +313,7 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
 
                             try {
                                 setIsUploading(true);
-                                await uploadMenuImage(files);
+                                await uploadMenuImage(files, pageId);
                                 await onReload();
                             } catch {
                                 alert("อัปโหลดไม่สำเร็จ");

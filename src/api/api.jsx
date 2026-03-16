@@ -1,8 +1,8 @@
 import axios from "axios";
 
 
-// export const baseUrl = "https://apisupermenu.mmm2007.net"; // เปลี่ยนเป็น URL ของเซิร์ฟเวอร์จริง
-export const baseUrl = "http://localhost:5127"; // เปลี่ยนเป็น URL ของเซิร์ฟเวอร์จริง
+export const baseUrl = "https://apisupermenu.mmm2007.net"; // เปลี่ยนเป็น URL ของเซิร์ฟเวอร์จริง
+// export const baseUrl = "http://localhost:5127"; // เปลี่ยนเป็น URL ของเซิร์ฟเวอร์จริง
 
 const api = axios.create({
     baseURL: `${baseUrl}/api`,
@@ -37,18 +37,20 @@ api.interceptors.response.use(
 );
 
 /* ---------- USER ---------- */
-export const getMenu = async () => {
-    const res = await api.get("/admin/menu");
+export const getMenu = async (pageId) => {
+    const res = await api.get(`/admin/menu/${pageId}`);
     return res.data;
 };
 
 /* ---------- ADMIN MENU ---------- */
-export const uploadMenuImage = async (files, category) => {
+export const uploadMenuImage = async (files, pageId, category) => {
     const form = new FormData();
 
     for (const file of files) {
-        form.append("files", file); // 🔥 ชื่อ key ต้องตรงกับ DTO: Files
+        form.append("files", file);
     }
+
+    form.append("pageId", pageId);
 
     if (category) form.append("category", category);
 
@@ -64,10 +66,13 @@ export const deleteMenuImage = async (id) => {
     await api.delete(`/admin/menu/images/${id}`);
 };
 
-export const replaceMenuImage = async (id, file, category) => {
+export const replaceMenuImage = async (id, file, pageId, category) => {
     const form = new FormData();
+
     form.append("file", file);
-    if (category) form.append("category", category); // ✅ เพิ่ม category
+    form.append("pageId", pageId);
+
+    if (category) form.append("category", category);
 
     await api.put(`/admin/menu/images/${id}/replace`, form, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -94,12 +99,22 @@ export const updateBrand = async (brandId, formData) => {
     return res.data;
 };
 
-export const updateMenuLink = async (menuId, categoryId, externalUrl) => {
+export const updateMenuLink = async (menuId, categoryId, externalUrl, internalUrl) => {
     await api.post("/admin/menu/update-link", {
         menuId,
         categoryId,
         externalUrl,
+        internalUrl
     });
+};
+export const getPages = async () => {
+    const res = await api.get("/admin/menu");
+    return res.data;
+};
+
+export const createPage = async (data) => {
+    const res = await api.post("/admin/menu", data);
+    return res.data;
 };
 
 
