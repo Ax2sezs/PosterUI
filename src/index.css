@@ -1,2 +1,42 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
+@layer utilities {
+    .bg-pattern {
+        background-color: #c58b55;
+        /* สีพื้นไม้โทนน้ำตาลแดงกลาง */
+        background-image:
+            /* ลายไม้เบา ๆ แนวเฉียง */
+            repeating-linear-gradient(7deg,
+                rgba(90, 45, 20, 0.08) 0px,
+                rgba(90, 45, 20, 0.08) 2px,
+                rgba(255, 230, 200, 0.04) 2px,
+                rgba(255, 230, 200, 0.04) 6px),
+            /* เฉดสีอุ่นไล่โทนแนวตั้ง */
+            linear-gradient(to bottom,
+                rgba(255, 240, 220, 0.2) 0%,
+                rgba(180, 100, 50, 0.15) 100%),
+            /* เส้นบาง ๆ แนวตั้งแบบสุ่ม */
+            repeating-linear-gradient(3deg,
+                rgba(0, 0, 0, 0.05) 0,
+                rgba(0, 0, 0, 0.05) 1px,
+                transparent 1px,
+                transparent 20px),
+            /* เงาไม้แนวนอนอ่อน */
+            repeating-linear-gradient(to bottom,
+                rgba(100, 60, 20, 0.02) 0,
+                rgba(100, 60, 20, 0.02) 2px,
+                transparent 2px,
+                transparent 40px);
+        background-blend-mode: multiply;
+        background-size: 150px 150px;
+    }
+
+    .bg-grid-pattern {
+        background-image:
+            linear-gradient(to right, rgba(140, 98, 58, 0.05) 2px, transparent 2px),
+            linear-gradient(to bottom, rgba(140, 98, 58, 0.05) 2px, transparent 2px);
+        background-size: 50px 50px;
+    }
+
+}

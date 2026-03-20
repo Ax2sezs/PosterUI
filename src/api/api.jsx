@@ -133,4 +133,8 @@ export const updateUserPassword = async (id, password) => {
     const res = await api.put(`/auth/${id}`, { password });
     return res.data;
 };
+export const generateThumbnails = async () => {
+    const res = await api.post("/admin/menu/generate-thumbnails");
+    return res.data;
+};
 

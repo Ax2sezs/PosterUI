@@ -37,29 +37,6 @@ const SortableMenuItem = ({ menu, menus, onReload, onUpdateCategory, pages, inde
         [menus, menu.category]
     );
 
-    // --- Thumbnail Logic ---
-    async function createThumbnail(url, size = 96) {
-        if (thumbCache.has(url)) return thumbCache.get(url);
-        try {
-            const res = await fetch(url);
-            const blob = await res.blob();
-            const bitmap = await createImageBitmap(blob, {
-                resizeWidth: size,
-                resizeHeight: size,
-                resizeQuality: "high"
-            });
-            const canvas = document.createElement("canvas");
-            canvas.width = size;
-            canvas.height = size;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(bitmap, 0, 0, size, size);
-            const data = canvas.toDataURL("image/webp", 0.8);
-            thumbCache.set(url, data);
-            return data;
-        } catch (e) {
-            return url; // fallback to original
-        }
-    }
 
     useEffect(() => {
         let active = true;
@@ -88,6 +65,11 @@ const SortableMenuItem = ({ menu, menus, onReload, onUpdateCategory, pages, inde
             }
         }
     }, [isModalOpen, menu]);
+
+    useEffect(() => {
+        const img = new Image();
+        img.src = `${baseUrl}${menu.imageUrl}`;
+    }, [menu.imageUrl]);
 
     // --- Handlers ---
     const handleFileSelect = (e) => {
@@ -134,13 +116,13 @@ const SortableMenuItem = ({ menu, menus, onReload, onUpdateCategory, pages, inde
             <div className="flex-1 flex items-center gap-6 overflow-hidden">
                 <div className="relative shrink-0">
                     <img
-                        src={thumb || `${baseUrl}${menu.imageUrl}`}
-                        width={96} height={96}
+                        src={`${baseUrl}${menu.thumbnailUrl}`}
                         loading="lazy"
-                        className="w-24 h-24 object-cover rounded-xl border bg-stone-50 transform-gpu"
-                        style={{ backfaceVisibility: 'hidden' }}
-                        alt="menu"
+                        decoding="async"
+                        className="w-24 h-24 object-cover rounded-xl"
                     />
+
+            
                 </div>
 
                 {/* Status Indicator */}
@@ -151,7 +133,7 @@ const SortableMenuItem = ({ menu, menus, onReload, onUpdateCategory, pages, inde
                                 <ArrowRight size={14} strokeWidth={3} />
                             </div>
                             <img
-                                src={thumb || `${baseUrl}${linkedPage.imageUrl}`}
+                                src={`${baseUrl}${linkedPage.thumbnailUrl}`}
                                 width={96} height={96}
                                 loading="lazy"
                                 className="w-16 h-16 object-cover rounded-xl bg-stone-50 transform-gpu"
@@ -245,7 +227,7 @@ const SortableMenuItem = ({ menu, menus, onReload, onUpdateCategory, pages, inde
                         <h3 className="text-xl font-black mb-2">ลบรูปเมนู?</h3>
                         <p className="text-stone-500 text-sm mb-6">ข้อมูลจะถูกลบถาวร</p>
                         <div className="flex gap-3">
-                            <button className="btn flex-1 bg-stone-100 border-none" onClick={() => setIsDeleteOpen(false)}>ยกเลิก</button>
+                            <button className="btn flex-1 text-stone-500 bg-stone-100 border-none" onClick={() => setIsDeleteOpen(false)}>ยกเลิก</button>
                             <button className="btn flex-1 btn-error text-white" onClick={async () => {
                                 setIsDeleting(true);
                                 await deleteMenuImage(menu.id);
@@ -297,7 +279,7 @@ const SortableMenuItem = ({ menu, menus, onReload, onUpdateCategory, pages, inde
                                                     className={`relative aspect-video rounded-2xl border-2 cursor-pointer transition-all overflow-hidden ${menu.category == p.id ? "border-primary ring-4 ring-primary/10" : "border-white hover:border-stone-200"}`}
                                                 >
                                                     <span className="absolute top-2 left-2 z-10 w-6 h-6 rounded-full bg-black/50 text-white text-[10px] flex items-center justify-center backdrop-blur-sm">{idx + 1}</span>
-                                                    <img src={`${baseUrl}${p.imageUrl}`} className="w-full h-full object-cover" alt="cat" />
+                                                    <img src={`${baseUrl}${p.thumbnailUrl}`} className="w-full h-full object-cover" alt="cat" />
                                                     {menu.category == p.id && <div className="absolute inset-0 bg-primary/20 flex items-center justify-center"><Link className="text-white" /></div>}
                                                 </div>
                                             ))}

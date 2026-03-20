@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { createBrand, uploadMenuImage, updateMenuSort, updateMenuLink, updateBrand, baseUrl } from "../api/api";
+import { createBrand, uploadMenuImage, updateMenuSort, updateMenuLink, updateBrand, baseUrl, generateThumbnails } from "../api/api";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { Upload, PlusCircle, LayoutGrid, Save, X, Globe, Store, ImagePlus } from "lucide-react";
+import { Upload, PlusCircle, LayoutGrid, Save, X, Globe, Store, ImagePlus, TriangleAlert } from "lucide-react";
 import SortableMenuItem from "../Components/SortableMenuItem";
 
 export default function AdminMenuPage({ menus, setMenus, brands, setBrands, currentDomain, setCurrentDomain, onReload, pageId, pages }) {
@@ -12,12 +12,32 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
     const [logoPreview, setLogoPreview] = useState(null);
     const [editingBrand, setEditingBrand] = useState(null); // null = create
     const [isUploading, setIsUploading] = useState(false);
+    const [feedback, setFeedback] = useState({ open: false, type: "success", message: "" });
+    const showFeedback = (type, message) => setFeedback({ open: true, type, message });
+    // const [loading, setLoading] = useState(false);
+
+    // const handleGenerate = async () => {
+    //     if (!confirm("Generate thumbnails สำหรับรูปเก่าทั้งหมด?"))
+    //         return;
+
+    //     try {
+    //         setLoading(true);
+    //         await generateThumbnails();
+    //         alert("Generate thumbnails เสร็จแล้ว 🎉");
+    //     } catch (err) {
+    //         console.error(err);
+    //         alert("พังแล้ว ไปดู console เอาเอง 😅");
+    //     } finally {
+    //         setLoading(false);
+    //     }
+    // };
+
 
     // ฟังก์ชันจัดการสร้างแบรนด์
     const handleSubmitBrand = async (e) => {
         e.preventDefault();
         if (!newBrand.name || !newBrand.domain) {
-            return alert("กรุณากรอกชื่อและโดเมน");
+            return showFeedback("warning", "กรุณากรอกชื่อและโดเมนให้ครบถ้วน");
         }
 
         setIsSubmitting(true);
@@ -43,10 +63,11 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
             }
 
             closeModal();
+            showFeedback("success", "บันทึกข้อมูลแบรนด์เรียบร้อย");
 
         } catch (err) {
             console.error(err);
-            alert("บันทึกแบรนด์ไม่สำเร็จ");
+            showFeedback("error", "บันทึกแบรนด์ไม่สำเร็จ");
         } finally {
             setIsSubmitting(false);
         }
@@ -115,9 +136,53 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
         document.addEventListener("open-edit-brand", openEdit);
         return () => document.removeEventListener("open-edit-brand", openEdit);
     }, []);
+    const FeedbackModal = ({ isOpen, type, message, onClose }) => {
+        if (!isOpen) return null;
 
+        const config = {
+            success: { icon: "🎉", color: "text-green-600", bg: "bg-green-50", btn: "btn-success" },
+            error: { icon: "😅", color: "text-red-600", bg: "bg-red-50", btn: "btn-error" },
+            warning: {
+                icon: < TriangleAlert size={40}/>, color: "text-amber-600", bg: "bg-base-100"
+            }
+        };
+
+        const style = config[type] || config.success;
+
+        return (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                <div className={`bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden border border-stone-100 p-8 text-center`}>
+                    <div className="flex w-full justify-center pb-4">{style.icon}</div>
+                    <h3 className={`text-xl font-bold mb-2 ${style.color}`}>
+                        {type === 'success' ? 'สำเร็จ!' : 'เกิดข้อผิดพลาด'}
+                    </h3>
+                    <p className="text-stone-600 mb-6">{message}</p>
+                    <button
+                        onClick={onClose}
+                        className={`btn w-full rounded-xl border-none text-white ${style.btn}`}
+                    >
+                        ตกลง
+                    </button>
+                </div>
+            </div>
+        );
+    };
     return (
         <div className="p-8 space-y-6">
+            <FeedbackModal
+                isOpen={feedback.open}
+                type={feedback.type}
+                message={feedback.message}
+                onClose={() => setFeedback({ ...feedback, open: false })}
+            />
+            {/* <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+                {loading ? "Generating..." : "Generate Thumbnails"}
+            </button> */}
+
             {/* --- Section: Top Bar --- */}
             {/* <section className="flex flex-col md:flex-row gap-4 items-end bg-stone-50 p-6 rounded-2xl border border-stone-200 shadow-sm">
                 <div className="form-control w-full md:w-1/2">
@@ -298,16 +363,14 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
 
                             // จำกัดไม่เกิน 5 ไฟล์
                             if (files.length > 5) {
-                                alert("อัปโหลดได้ไม่เกิน 5 ไฟล์ต่อครั้ง");
-                                e.target.value = null;
+                                showFeedback("warning", "อัปโหลดได้ไม่เกิน 5 ไฟล์ต่อครั้ง"); // เปลี่ยนจาก alert                                e.target.value = null;
                                 return;
                             }
 
                             // กันไฟล์ไม่ใช่รูป
                             const invalid = files.filter(f => !f.type.startsWith("image/"));
                             if (invalid.length) {
-                                alert("อัปโหลดได้เฉพาะไฟล์รูป");
-                                e.target.value = null;
+                                showFeedback("warning", "อัปโหลดได้เฉพาะไฟล์รูปภาพเท่านั้น"); // เปลี่ยนจาก alert                                e.target.value = null;
                                 return;
                             }
 
@@ -316,8 +379,7 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
                                 await uploadMenuImage(files, pageId);
                                 await onReload();
                             } catch {
-                                alert("อัปโหลดไม่สำเร็จ");
-                            } finally {
+                                showFeedback("error", "อัปโหลดรูปภาพไม่สำเร็จ"); // เปลี่ยนจาก alert                            } finally {
                                 setIsUploading(false);
                                 e.target.value = null;
                             }
@@ -328,6 +390,7 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
 
                 </label>
             )}
+
 
         </div>
     );
