@@ -138,3 +138,36 @@ export const generateThumbnails = async () => {
     return res.data;
 };
 
+// Preloads an image URL and returns it; used by components that cache thumbnails client-side.
+export const createThumbnail = (url) =>
+    new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(url);
+        img.onerror = () => resolve(url);
+        img.src = url;
+    });
+
+/* ---------- ADMIN VIDEOS ---------- */
+export const uploadVideo = async (file, pageId, title, onProgress) => {
+    const form = new FormData();
+    form.append("file", file);
+    if (pageId) form.append("pageId", pageId);
+    if (title) form.append("title", title);
+
+    const res = await api.post("/admin/videos", form, {
+        onUploadProgress: (e) => {
+            if (e.total) onProgress?.(Math.round((e.loaded * 100) / e.total));
+        },
+    });
+    return res.data;
+};
+
+export const getVideos = async (pageId) => {
+    const res = await api.get("/admin/videos", { params: pageId ? { pageId } : {} });
+    return res.data;
+};
+
+export const deleteVideo = async (id) => {
+    await api.delete(`/admin/videos/${id}`);
+};
+

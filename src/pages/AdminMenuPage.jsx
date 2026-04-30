@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { createBrand, uploadMenuImage, updateMenuSort, updateMenuLink, updateBrand, baseUrl, generateThumbnails } from "../api/api";
+import { createBrand, uploadMenuImage, updateMenuSort, updateMenuLink, updateBrand, baseUrl, generateThumbnails, getVideos } from "../api/api";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { Upload, PlusCircle, LayoutGrid, Save, X, Globe, Store, ImagePlus, TriangleAlert } from "lucide-react";
+import { Upload, PlusCircle, LayoutGrid, Save, X, Globe, Store, ImagePlus, TriangleAlert, Film, Image } from "lucide-react";
 import SortableMenuItem from "../Components/SortableMenuItem";
+import VideoUpload from "../Components/VideoUpload";
+import VideoPlayer from "../Components/VideoPlayer";
 
 export default function AdminMenuPage({ menus, setMenus, brands, setBrands, currentDomain, setCurrentDomain, onReload, pageId, pages }) {
     const [isCreating, setIsCreating] = useState(false);
@@ -12,6 +14,9 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
     const [logoPreview, setLogoPreview] = useState(null);
     const [editingBrand, setEditingBrand] = useState(null); // null = create
     const [isUploading, setIsUploading] = useState(false);
+    const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+    const [videos, setVideos] = useState([]);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [feedback, setFeedback] = useState({ open: false, type: "success", message: "" });
     const showFeedback = (type, message) => setFeedback({ open: true, type, message });
     // const [loading, setLoading] = useState(false);
@@ -136,6 +141,12 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
         document.addEventListener("open-edit-brand", openEdit);
         return () => document.removeEventListener("open-edit-brand", openEdit);
     }, []);
+
+    useEffect(() => {
+        if (!pageId) return;
+        getVideos(pageId).then(setVideos).catch(() => { });
+    }, [pageId]);
+
     const FeedbackModal = ({ isOpen, type, message, onClose }) => {
         if (!isOpen) return null;
 
@@ -143,7 +154,7 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
             success: { icon: "🎉", color: "text-green-600", bg: "bg-green-50", btn: "btn-success" },
             error: { icon: "😅", color: "text-red-600", bg: "bg-red-50", btn: "btn-error" },
             warning: {
-                icon: < TriangleAlert size={40}/>, color: "text-amber-600", bg: "bg-base-100"
+                icon: < TriangleAlert size={40} />, color: "text-amber-600", bg: "bg-base-100"
             }
         };
 
@@ -245,6 +256,25 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
                 </div>
             )}
 
+            {/* --- Section: Video List --- */}
+            {videos.length > 0 && (
+                <div className="space-y-4 animate-in fade-in duration-500">
+                    <div className="flex items-center gap-2 border-b border-stone-100 pb-2 text-stone-400">
+                        <Film size={16} />
+                        <span className="text-sm font-bold">วิดีโอที่อัปโหลด</span>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {videos.map((v) => (
+                            <VideoPlayer
+                                key={v.id}
+                                video={v}
+                                onDeleted={(id) => setVideos((prev) => prev.filter((x) => x.id !== id))}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* --- MODAL: Create New Brand --- */}
             {isCreating && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -339,56 +369,104 @@ export default function AdminMenuPage({ menus, setMenus, brands, setBrands, curr
                     </div>
                 </div>
             )}
+            {/* --- Video Upload Modal --- */}
+            {isVideoModalOpen && (
+                <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-4xl shadow-2xl w-full max-w-md overflow-hidden border border-white/20">
+                        <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
+                            <h3 className="text-xl font-black text-stone-800 flex items-center gap-2">
+                                <Film size={22} className="text-primary" /> อัปโหลดวิดีโอ
+                            </h3>
+                            <button onClick={() => setIsVideoModalOpen(false)} className="btn bg-white border-hidden btn-circle btn-sm text-stone-400 hover:text-stone-800">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-8">
+                            <VideoUpload
+                                pageId={pageId}
+                                onUploaded={(v) => {
+                                    setVideos((prev) => [...prev, v]);
+                                    setIsVideoModalOpen(false);
+                                    showFeedback("success", "อัปโหลดวิดีโอเรียบร้อยแล้ว");
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- Floating Button: Video Upload --- */}
             {currentDomain && (
-                <label
-                    className={`fixed bottom-8 right-[36%] z-50 btn btn-circle btn-lg shadow-2xl btn-primary 
-    ${isUploading
-                            ? 'cursor-not-allowed'
-                            : 'shadow-blue-300'
-                        }`}
-                >
-                    {isUploading ? (
-                        <span className="loading loading-spinner loading-md"></span>
-                    ) : (
-                        <Upload size={22} />
+                <div className="fixed bottom-8 right-[36%] z-50">
+                    {/* ปุ่มหลัก */}
+                    <button
+                        className="btn btn-circle btn-lg shadow-2xl bg-violet-500 hover:bg-violet-600 border-none text-white"
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    >
+                        <Upload size={20} />
+                    </button>
+
+                    {/* เมนูเลือก */}
+                    {isMenuOpen && (
+                        <div className="absolute bottom-20 right-0 flex flex-col gap-2">
+
+                            {/* Upload Image */}
+                            <label className="btn btn-primary btn-circle shadow-lg">
+                                {isUploading ? (
+                                    <span className="loading loading-spinner loading-md"></span>
+                                ) : (
+                                    <Image size={20} />
+                                )}
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    hidden
+                                    disabled={isUploading}
+                                    onChange={async (e) => {
+                                        const files = Array.from(e.target.files);
+
+                                        if (files.length > 5) {
+                                            showFeedback("warning", "อัปโหลดได้ไม่เกิน 5 ไฟล์");
+                                            e.target.value = null;
+                                            return;
+                                        }
+
+                                        const invalid = files.filter(f => !f.type.startsWith("image/"));
+                                        if (invalid.length) {
+                                            showFeedback("warning", "เฉพาะรูปเท่านั้น");
+                                            e.target.value = null;
+                                            return;
+                                        }
+
+                                        try {
+                                            setIsUploading(true);
+                                            await uploadMenuImage(files, pageId);
+                                            await onReload();
+                                        } catch {
+                                            showFeedback("error", "อัปโหลดรูปไม่สำเร็จ");
+                                        } finally {
+                                            setIsUploading(false);
+                                            e.target.value = null;
+                                            setIsMenuOpen(false);
+                                        }
+                                    }}
+                                />
+                            </label>
+
+                            {/* Upload Video */}
+                            <button
+                                className="btn btn-circle btn-secondary shadow-lg"
+                                onClick={() => {
+                                    setIsVideoModalOpen(true);
+                                    setIsMenuOpen(false);
+                                }}
+                            >
+                                <Film size={20} />
+                            </button>
+                        </div>
                     )}
-                    <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        hidden
-                        disabled={isUploading}
-                        onChange={async (e) => {
-                            const files = Array.from(e.target.files);
-
-                            // จำกัดไม่เกิน 5 ไฟล์
-                            if (files.length > 5) {
-                                showFeedback("warning", "อัปโหลดได้ไม่เกิน 5 ไฟล์ต่อครั้ง"); // เปลี่ยนจาก alert                                e.target.value = null;
-                                return;
-                            }
-
-                            // กันไฟล์ไม่ใช่รูป
-                            const invalid = files.filter(f => !f.type.startsWith("image/"));
-                            if (invalid.length) {
-                                showFeedback("warning", "อัปโหลดได้เฉพาะไฟล์รูปภาพเท่านั้น"); // เปลี่ยนจาก alert                                e.target.value = null;
-                                return;
-                            }
-
-                            try {
-                                setIsUploading(true);
-                                await uploadMenuImage(files, pageId);
-                                await onReload();
-                            } catch {
-                                showFeedback("error", "อัปโหลดรูปภาพไม่สำเร็จ"); // เปลี่ยนจาก alert                            } finally {
-                                setIsUploading(false);
-                                e.target.value = null;
-                            }
-                        }}
-                    />
-
-
-
-                </label>
+                </div>
             )}
 
 

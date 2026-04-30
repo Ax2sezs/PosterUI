@@ -5,7 +5,7 @@ import {
     ExternalLink, RefreshCw, X, Link, BookOpenCheck
 } from "lucide-react";
 import { useState, useEffect, useMemo, memo } from "react";
-import { replaceMenuImage, deleteMenuImage, baseUrl } from "../api/api";
+import { replaceMenuImage, deleteMenuImage, baseUrl,createThumbnail } from "../api/api";
 
 const thumbCache = new Map();
 
